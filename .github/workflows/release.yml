@@ -180,7 +180,7 @@ jobs:
         id: create_release
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          name: WordPress Prometheus Metrics v${{ steps.version.outputs.version }}
+          name: Prometheus Metrics v${{ steps.version.outputs.version }}
           body_path: changelog.txt
           draft: false
           prerelease: false
