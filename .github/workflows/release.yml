@@ -1,0 +1,178 @@
+name: Create WordPress Plugin Release
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "prometheus-metrics/readme.txt"
+
+jobs:
+  check-version-change:
+    runs-on: ubuntu-latest
+    outputs:
+      version-changed: ${{ steps.check.outputs.changed }}
+      new-version: ${{ steps.extract.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if stable tag changed
+        id: check
+        run: |
+          # Get the stable tag from current commit
+          CURRENT_VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //')
+          echo "Current version: $CURRENT_VERSION"
+
+          # Get the stable tag from previous commit
+          git show HEAD~1:prometheus-metrics/readme.txt > readme-old.txt || echo "No previous version"
+          if [ -f readme-old.txt ]; then
+            PREVIOUS_VERSION=$(grep "Stable tag:" readme-old.txt | sed 's/Stable tag: //' || echo "")
+            echo "Previous version: $PREVIOUS_VERSION"
+          else
+            PREVIOUS_VERSION=""
+          fi
+
+          # Check if version changed
+          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] && [ ! -z "$CURRENT_VERSION" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed from '$PREVIOUS_VERSION' to '$CURRENT_VERSION'"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No version change detected"
+          fi
+
+      - name: Extract version number
+        id: extract
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //' | tr -d ' \r\n')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+  create-release:
+    needs: check-version-change
+    if: needs.check-version-change.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${{ needs.check-version-change.outputs.new-version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Creating release for version: $VERSION"
+
+      - name: Check if release already exists
+        id: check-release
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/v${{ steps.version.outputs.version }}")
+
+          if [ "$RESPONSE" = "200" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Release v${{ steps.version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Release v${{ steps.version.outputs.version }} does not exist"
+          fi
+
+      - name: Create plugin ZIP
+        if: steps.check-release.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Create temporary directory for the plugin
+          mkdir -p temp/prometheus-metrics
+
+          # Copy plugin files
+          cp -r prometheus-metrics/* temp/prometheus-metrics/
+
+          # Create ZIP file
+          cd temp
+          zip -r "../prometheus-metrics-${VERSION}.zip" prometheus-metrics/
+          cd ..
+
+          # Verify ZIP was created
+          if [ -f "prometheus-metrics-${VERSION}.zip" ]; then
+            echo "ZIP file created successfully: prometheus-metrics-${VERSION}.zip"
+            ls -la "prometheus-metrics-${VERSION}.zip"
+          else
+            echo "ERROR: ZIP file was not created"
+            exit 1
+          fi
+
+      - name: Generate changelog
+        if: steps.check-release.outputs.exists == 'false'
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Extract changelog for this version from readme.txt
+          awk "/= $VERSION =/{flag=1; next} /= [0-9]/{flag=0} flag" prometheus-metrics/readme.txt > changelog.txt
+
+          # If changelog is empty, create a generic one
+          if [ ! -s changelog.txt ]; then
+            echo "Release version $VERSION" > changelog.txt
+            echo "" >> changelog.txt
+            echo "See readme.txt for detailed changes." >> changelog.txt
+          fi
+
+          echo "Generated changelog:"
+          cat changelog.txt
+
+      - name: Create GitHub Release
+        if: steps.check-release.outputs.exists == 'false'
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: WordPress Prometheus Metrics v${{ steps.version.outputs.version }}
+          body_path: changelog.txt
+          draft: false
+          prerelease: false
+
+      - name: Upload ZIP to Release
+        if: steps.check-release.outputs.exists == 'false'
+        uses: actions/upload-release-asset@v1
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./prometheus-metrics-${{ steps.version.outputs.version }}.zip
+          asset_name: prometheus-metrics-${{ steps.version.outputs.version }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload WordPress.org compatible ZIP
+        if: steps.check-release.outputs.exists == 'false'
+        uses: actions/upload-release-asset@v1
+        env:
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./prometheus-metrics-${{ steps.version.outputs.version }}.zip
+          asset_name: prometheus-metrics.zip
+          asset_content_type: application/zip
+
+      - name: Release Summary
+        if: steps.check-release.outputs.exists == 'false'
+        run: |
+          echo "🎉 Successfully created release v${{ steps.version.outputs.version }}"
+          echo "📦 ZIP file: prometheus-metrics-${{ steps.version.outputs.version }}.zip"
+          echo "🔗 Release URL: ${{ steps.create_release.outputs.html_url }}"
+          echo ""
+          echo "📋 Files included in ZIP:"
+          unzip -l "prometheus-metrics-${{ steps.version.outputs.version }}.zip"
+
+      - name: Skip Release (Already Exists)
+        if: steps.check-release.outputs.exists == 'true'
+        run: |
+          echo "ℹ️  Release v${{ steps.version.outputs.version }} already exists, skipping creation"
+          echo "🔗 View existing release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
