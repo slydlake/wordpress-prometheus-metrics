@@ -187,7 +187,7 @@ jobs:
           files: |
             prometheus-metrics-${{ steps.version.outputs.version }}.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: Upload WordPress.org compatible ZIP
         if: steps.check-release.outputs.exists == 'false'
@@ -198,7 +198,7 @@ jobs:
           # Upload additional file using GitHub CLI
           gh release upload "v${{ steps.version.outputs.version }}" "prometheus-metrics.zip" --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: Release Summary
         if: steps.check-release.outputs.exists == 'false'
