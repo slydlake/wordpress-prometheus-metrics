@@ -5,6 +5,17 @@ on:
     branches: [master, main]
     paths:
       - "prometheus-metrics/readme.txt"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 1.0.2). Leave empty to use version from readme.txt"
+        required: false
+        type: string
+      force_release:
+        description: "Force release even if version unchanged"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   check-version-change:
@@ -21,33 +32,56 @@ jobs:
       - name: Check if stable tag changed
         id: check
         run: |
-          # Get the stable tag from current commit
-          CURRENT_VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //')
-          echo "Current version: $CURRENT_VERSION"
-
-          # Get the stable tag from previous commit
-          git show HEAD~1:prometheus-metrics/readme.txt > readme-old.txt || echo "No previous version"
-          if [ -f readme-old.txt ]; then
-            PREVIOUS_VERSION=$(grep "Stable tag:" readme-old.txt | sed 's/Stable tag: //' || echo "")
-            echo "Previous version: $PREVIOUS_VERSION"
+          # Handle manual dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual workflow dispatch detected"
+            
+            if [ "${{ inputs.force_release }}" = "true" ]; then
+              echo "Force release enabled"
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "Manual dispatch without force - checking for changes"
+              # For manual dispatch, always consider as changed unless explicitly forced to false
+              echo "changed=true" >> $GITHUB_OUTPUT
+            fi
           else
-            PREVIOUS_VERSION=""
-          fi
+            # Automatic trigger - check for actual changes
+            # Get the stable tag from current commit
+            CURRENT_VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //')
+            echo "Current version: $CURRENT_VERSION"
 
-          # Check if version changed
-          if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] && [ ! -z "$CURRENT_VERSION" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Version changed from '$PREVIOUS_VERSION' to '$CURRENT_VERSION'"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No version change detected"
+            # Get the stable tag from previous commit
+            git show HEAD~1:prometheus-metrics/readme.txt > readme-old.txt || echo "No previous version"
+            if [ -f readme-old.txt ]; then
+              PREVIOUS_VERSION=$(grep "Stable tag:" readme-old.txt | sed 's/Stable tag: //' || echo "")
+              echo "Previous version: $PREVIOUS_VERSION"
+            else
+              PREVIOUS_VERSION=""
+            fi
+
+            # Check if version changed
+            if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] && [ ! -z "$CURRENT_VERSION" ]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "Version changed from '$PREVIOUS_VERSION' to '$CURRENT_VERSION'"
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "No version change detected"
+            fi
           fi
 
       - name: Extract version number
         id: extract
         if: steps.check.outputs.changed == 'true'
         run: |
-          VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //' | tr -d ' \r\n')
+          # Check if manual version is provided
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ ! -z "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            echo "Using manually provided version: $VERSION"
+          else
+            VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //' | tr -d ' \r\n')
+            echo "Using version from readme.txt: $VERSION"
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
@@ -59,6 +93,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Workflow Info
+        run: |
+          echo "🚀 WordPress Plugin Release Workflow"
+          echo "Trigger: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual execution requested"
+            echo "Input version: ${{ inputs.version }}"
+            echo "Force release: ${{ inputs.force_release }}"
+          else
+            echo "Automatic execution triggered by push"
+          fi
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
 
       - name: Get version
         id: version
