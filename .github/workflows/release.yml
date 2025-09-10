@@ -128,45 +128,36 @@ jobs:
 
       - name: Create GitHub Release
         if: steps.check-release.outputs.exists == 'false'
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         id: create_release
-        env:
-          PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
           tag_name: v${{ steps.version.outputs.version }}
-          release_name: WordPress Prometheus Metrics v${{ steps.version.outputs.version }}
+          name: WordPress Prometheus Metrics v${{ steps.version.outputs.version }}
           body_path: changelog.txt
           draft: false
           prerelease: false
-
-      - name: Upload ZIP to Release
-        if: steps.check-release.outputs.exists == 'false'
-        uses: actions/upload-release-asset@v1
+          files: |
+            prometheus-metrics-${{ steps.version.outputs.version }}.zip
         env:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./prometheus-metrics-${{ steps.version.outputs.version }}.zip
-          asset_name: prometheus-metrics-${{ steps.version.outputs.version }}.zip
-          asset_content_type: application/zip
 
       - name: Upload WordPress.org compatible ZIP
         if: steps.check-release.outputs.exists == 'false'
-        uses: actions/upload-release-asset@v1
+        run: |
+          # Create a copy with generic name for WordPress.org compatibility
+          cp "prometheus-metrics-${{ steps.version.outputs.version }}.zip" "prometheus-metrics.zip"
+
+          # Upload additional file using GitHub CLI
+          gh release upload "v${{ steps.version.outputs.version }}" "prometheus-metrics.zip" --clobber
         env:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./prometheus-metrics-${{ steps.version.outputs.version }}.zip
-          asset_name: prometheus-metrics.zip
-          asset_content_type: application/zip
 
       - name: Release Summary
         if: steps.check-release.outputs.exists == 'false'
         run: |
           echo "🎉 Successfully created release v${{ steps.version.outputs.version }}"
           echo "📦 ZIP file: prometheus-metrics-${{ steps.version.outputs.version }}.zip"
-          echo "🔗 Release URL: ${{ steps.create_release.outputs.html_url }}"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
           echo ""
           echo "📋 Files included in ZIP:"
           unzip -l "prometheus-metrics-${{ steps.version.outputs.version }}.zip"
