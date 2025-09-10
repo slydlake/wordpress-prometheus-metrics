@@ -3,7 +3,7 @@ Contributors: timonf
 Tags: prometheus, metrics, monitoring, observability, performance
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.0
+Stable tag: 1.0.1
 Requires PHP: 7.4
 License: MIT
 License URI: https://opensource.org/licenses/MIT
@@ -26,6 +26,8 @@ The Prometheus Metrics WordPress plugin is a powerful monitoring plugin that exp
 * **Environment Variable Support** - Enhanced security with external encryption key management
 * **Admin Interface** - User-friendly settings page with token management
 * **Multi-Site Support** - All metrics include site labels for multi-site filtering
+* **Grafana Optimized** - Display-friendly metrics specifically designed for clean table visualizations
+* **Clean URL Support** - WordPress Rewrite API integration for /prometheus/metrics endpoints
 
 **Available Metrics:**
 
@@ -37,6 +39,8 @@ The Prometheus Metrics WordPress plugin is a powerful monitoring plugin that exp
 * Database and directory sizes
 * PHP configuration details
 * Site health check results
+* Grafana-optimized display metrics for clean table visualizations
+* Individual health check test results with detailed descriptions
 * And much more...
 
 **Authentication Methods:**
@@ -112,11 +116,26 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 
 == Screenshots ==
 
-1. Admin settings page showing token configuration and security options
-2. Example Prometheus metrics output in plain text format
-3. Grafana dashboard displaying WordPress metrics and health status
+1. Admin settings page for endpoint
+2. Admin settings page for authentication methods
+3. Admin settings page for user sampels
+4. Grafana dashboard displaying WordPress metrics and health status
+5. Grafana dashboard displaying WordPress metrics and health status
+6. Grafana dashboard selectable Websites
 
 == Changelog ==
+
+= 1.0.1 =
+* Fixed REST API Endpoints /prometheus/metrics and /metrics
+* Enhanced Site Health integration with detailed test results
+* Fixed plugin update metrics to include inactive plugins
+* Added wp_health_check_detail metrics for granular monitoring
+* Improved WordPress Coding Standards compliance
+* Fixed PHP Version export as label string
+* Added Grafana-optimized display metrics (wp_php_version, wp_memory_limit_display, wp_upload_max_display, wp_post_max_display, wp_exec_time_display)
+* Enhanced table compatibility for Grafana dashboards with unique label structures
+* Improved WordPress Rewrite API integration for clean /prometheus/metrics URLs
+* Added comprehensive health check monitoring with individual test results
 
 = 1.0.0 =
 * Initial release

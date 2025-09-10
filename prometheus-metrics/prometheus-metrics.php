@@ -6,7 +6,7 @@
  * Description: Plugin to export metrics for prometheus
  * Author: Timon Först
  * Author URI: https://github.com/slydlake
- * Version: 1.0
+ * Version: 1.0.1
  * License: MIT
  */
 
@@ -39,9 +39,17 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
             // Add settings link to plugin page
             add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( __CLASS__, 'add_plugin_action_links' ) );
             
+            // Register custom rewrite rules for prometheus endpoints (always register)
+            add_action( 'init', array( __CLASS__, 'add_rewrite_rules' ) );
+            add_filter( 'query_vars', array( __CLASS__, 'add_query_vars' ) );
+            add_action( 'template_redirect', array( __CLASS__, 'handle_prometheus_request' ) );
+            
             // Alternative URL handling for environments without proper REST API rewrites
             add_action( 'init', array( __CLASS__, 'handle_alternative_urls' ) );
             add_filter( 'request', array( __CLASS__, 'handle_request_filter' ) );
+            
+            // Check and refresh rewrite rules if needed (admin only)
+            add_action( 'admin_init', array( __CLASS__, 'maybe_flush_rewrite_rules' ) );
         }
 
         /**
@@ -268,16 +276,17 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
             $updates_response = isset( $updates->response ) && is_array( $updates->response ) ? $updates->response : array();
             $plugins_with_updates = array_keys( $updates_response );
 
-            // Zähle nur aktive Plugins, die ein Update brauchen
-            $plugins_needing_update_active = array_intersect( $active_plugins, $plugins_with_updates );
+            // Zähle ALLE installierten Plugins (aktive + inaktive), die ein Update brauchen
+            $all_installed_plugins = array_keys( $all_plugins );
+            $plugins_needing_update = array_intersect( $all_installed_plugins, $plugins_with_updates );
 
-            // Aktive Plugins, die aktuell sind
-            $plugins_up_to_date_active = array_diff( $active_plugins, $plugins_needing_update_active );
+            // Alle installierte Plugins, die aktuell sind
+            $plugins_up_to_date = array_diff( $all_installed_plugins, $plugins_needing_update );
 
             $out .= "# HELP wp_plugins_update Plugin update status.\n";
             $out .= "# TYPE wp_plugins_update counter\n";
-            $out .= 'wp_plugins_update{wp_site="' . self::escape_label_value( $site_name ) . '",status="available"} ' . count( $plugins_needing_update_active ) . "\n";
-            $out .= 'wp_plugins_update{wp_site="' . self::escape_label_value( $site_name ) . '",status="uptodate"} ' . count( $plugins_up_to_date_active ) . "\n";
+            $out .= 'wp_plugins_update{wp_site="' . self::escape_label_value( $site_name ) . '",status="available"} ' . count( $plugins_needing_update ) . "\n";
+            $out .= 'wp_plugins_update{wp_site="' . self::escape_label_value( $site_name ) . '",status="uptodate"} ' . count( $plugins_up_to_date ) . "\n";
 
             // Themes (installed)
             $themes = wp_get_themes();
@@ -404,21 +413,21 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
             
             try {
                 // Autoload count
-                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
                 $autoload_count = (int) $wpdb->get_var( "SELECT count(*) FROM $wpdb->options WHERE `autoload` = 'yes'" );
                 $out .= "# HELP wp_autoload_count Number of autoloaded options.\n";
                 $out .= "# TYPE wp_autoload_count gauge\n";
                 $out .= 'wp_autoload_count{wp_site="' . self::escape_label_value( $site_name ) . '"} ' . $autoload_count . "\n";
                 
                 // Autoload size in KB
-                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
                 $autoload_size = (int) $wpdb->get_var( "SELECT ROUND(SUM(LENGTH(option_value))/ 1024) FROM $wpdb->options WHERE `autoload` = 'yes'" );
                 $out .= "# HELP wp_autoload_size Size of autoloaded options in KB.\n";
                 $out .= "# TYPE wp_autoload_size gauge\n";
                 $out .= 'wp_autoload_size{wp_site="' . self::escape_label_value( $site_name ) . '"} ' . $autoload_size . "\n";
                 
                 // Autoload transient count
-                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
                 $autoload_transients = (int) $wpdb->get_var( "SELECT count(*) FROM $wpdb->options WHERE `autoload` = 'yes' AND `option_name` LIKE '%transient%'" );
                 $out .= "# HELP wp_autoload_transients Number of autoloaded transients.\n";
                 $out .= "# TYPE wp_autoload_transients gauge\n";
@@ -432,11 +441,33 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
                 $out .= "# HELP wp_php_info PHP configuration information.\n";
                 $out .= "# TYPE wp_php_info gauge\n";
                 
-                // PHP Version
+                // PHP Version - with numeric ID for backwards compatibility
                 $out .= 'wp_php_info{wp_site="' . self::escape_label_value( $site_name ) . '",type="version",label="' . self::escape_label_value( PHP_VERSION ) . '"} ' . PHP_VERSION_ID . "\n";
                 $out .= 'wp_php_info{wp_site="' . self::escape_label_value( $site_name ) . '",type="major_version",label="' . PHP_MAJOR_VERSION . '"} ' . PHP_MAJOR_VERSION . "\n";
                 $out .= 'wp_php_info{wp_site="' . self::escape_label_value( $site_name ) . '",type="minor_version",label="' . PHP_MINOR_VERSION . '"} ' . PHP_MINOR_VERSION . "\n";
                 $out .= 'wp_php_info{wp_site="' . self::escape_label_value( $site_name ) . '",type="release_version",label="' . PHP_RELEASE_VERSION . '"} ' . PHP_RELEASE_VERSION . "\n";
+
+                // Add new metric for PHP version string display
+                $out .= "# HELP wp_php_version PHP version as readable string.\n";
+                $out .= "# TYPE wp_php_version gauge\n";
+                $out .= 'wp_php_version{wp_site="' . self::escape_label_value( $site_name ) . '",php_version="' . self::escape_label_value( PHP_VERSION ) . '"} 1' . "\n";
+
+                // Add simple configuration metrics for table display
+                $out .= "# HELP wp_config WordPress and PHP configuration values.\n";
+                $out .= "# TYPE wp_config gauge\n";
+                
+                // Add specific metrics for table display
+                $out .= "# HELP wp_memory_limit_display Memory limit for table display.\n";
+                $out .= "# TYPE wp_memory_limit_display gauge\n";
+                
+                $out .= "# HELP wp_upload_max_display Upload max filesize for table display.\n";
+                $out .= "# TYPE wp_upload_max_display gauge\n";
+                
+                $out .= "# HELP wp_post_max_display Post max size for table display.\n";
+                $out .= "# TYPE wp_post_max_display gauge\n";
+                
+                $out .= "# HELP wp_exec_time_display Max execution time for table display.\n";
+                $out .= "# TYPE wp_exec_time_display gauge\n";
 
                 // PHP Configuration values
                 if ( function_exists( 'ini_get' ) ) {
@@ -452,7 +483,27 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
                                 $numeric_value = self::convert_to_bytes( $value );
                             }
                             
+                            // Original detailed metric
                             $out .= 'wp_php_info{wp_site="' . self::escape_label_value( $site_name ) . '",type="' . $php_variable . '",label="' . self::escape_label_value( $value ) . '"} ' . $numeric_value . "\n";
+                            
+                            // Simple config metric for table display
+                            $out .= 'wp_config{wp_site="' . self::escape_label_value( $site_name ) . '",config="' . $php_variable . '",value="' . self::escape_label_value( $value ) . '"} ' . $numeric_value . "\n";
+                            
+                            // Specific metrics for easy table display
+                            switch ( $php_variable ) {
+                                case 'memory_limit':
+                                    $out .= 'wp_memory_limit_display{wp_site="' . self::escape_label_value( $site_name ) . '",memory_limit="' . self::escape_label_value( $value ) . '"} 1' . "\n";
+                                    break;
+                                case 'upload_max_filesize':
+                                    $out .= 'wp_upload_max_display{wp_site="' . self::escape_label_value( $site_name ) . '",upload_max="' . self::escape_label_value( $value ) . '"} 1' . "\n";
+                                    break;
+                                case 'post_max_size':
+                                    $out .= 'wp_post_max_display{wp_site="' . self::escape_label_value( $site_name ) . '",post_max="' . self::escape_label_value( $value ) . '"} 1' . "\n";
+                                    break;
+                                case 'max_execution_time':
+                                    $out .= 'wp_exec_time_display{wp_site="' . self::escape_label_value( $site_name ) . '",exec_time="' . self::escape_label_value( $value ) . '"} 1' . "\n";
+                                    break;
+                            }
                         }
                     }
                 }
@@ -462,7 +513,7 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
 
             // Database Size
             try {
-                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Metrics data, cached at application level via transients
                 $db_size = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(ROUND(((data_length + index_length) / 1024 / 1024), 2)) as value FROM information_schema.TABLES WHERE table_schema = %s", DB_NAME ) );
                 if ( $db_size > 0 ) {
                     $out .= "# HELP wp_database_size Database size in MB.\n";
@@ -492,6 +543,30 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
                 
                 foreach ( $health_check as $category => $count ) {
                     $out .= 'wp_health_check{wp_site="' . self::escape_label_value( $site_name ) . '",category="' . $category . '"} ' . $count . "\n";
+                }
+            }
+
+            // Site Health Check Details (individual test results)
+            $health_details = self::get_health_check_details();
+            if ( ! empty( $health_details ) ) {
+                $out .= "# HELP wp_health_check_detail Individual health check test results.\n";
+                $out .= "# TYPE wp_health_check_detail gauge\n";
+                
+                foreach ( $health_details as $test_detail ) {
+                    $status_value = 0;
+                    switch ( $test_detail['status'] ) {
+                        case 'good':
+                            $status_value = 1;
+                            break;
+                        case 'recommended':
+                            $status_value = 0;
+                            break;
+                        case 'critical':
+                            $status_value = -1;
+                            break;
+                    }
+                    
+                    $out .= 'wp_health_check_detail{wp_site="' . self::escape_label_value( $site_name ) . '",test_name="' . self::escape_label_value( $test_detail['test'] ) . '",status="' . self::escape_label_value( $test_detail['status'] ) . '",category="' . self::escape_label_value( $test_detail['category'] ) . '",description="' . self::escape_label_value( $test_detail['description'] ) . '"} ' . $status_value . "\n";
                 }
             }
 
@@ -567,15 +642,16 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
                 
                 <div class="card">
                     <h2>Endpoint Information</h2>
-                    <p><strong>Primary Metrics Endpoint (REST API):</strong> <code><?php echo esc_url( $endpoint_url ); ?></code></p>
+                    <p><strong>Primary Metrics Endpoint (Clean URL):</strong> <code><?php echo esc_url( home_url( '/prometheus/metrics' ) ); ?></code></p>
+                    <p><em>Recommended endpoint with clean URL structure. Works out-of-the-box with WordPress permalinks enabled.</em></p>
                     
-                    <h3>Alternative Endpoints (No Apache Rewrite Required)</h3>
-                    <p>If REST API rewrites are not working, use these alternative URLs:</p>
+                    <h3>Alternative Endpoints (Fallback)</h3>
+                    <p>If the primary endpoint is not working, use these alternative URLs:</p>
                     <ul>
-                        <li><strong>Fallback URL:</strong> <code><?php echo esc_url( home_url( '/index.php?rest_route=/wp-prometheus/v1/metrics' ) ); ?></code></li>
-                        <li><strong>Query Parameter:</strong> <code><?php echo esc_url( home_url( '/?wp_prometheus_metrics=1' ) ); ?></code></li>
-                        <li><strong>Simple Path:</strong> <code><?php echo esc_url( home_url( '/metrics' ) ); ?></code> <em>(requires WordPress permalink support)</em></li>
-                        <li><strong>Prometheus Path:</strong> <code><?php echo esc_url( home_url( '/prometheus/metrics' ) ); ?></code> <em>(requires WordPress permalink support)</em></li>
+                        <li><strong>REST API Endpoint:</strong> <code><?php echo esc_url( $endpoint_url ); ?></code></li>
+                        <li><strong>REST API Fallback:</strong> <code><?php echo esc_url( home_url( '/index.php?rest_route=/wp-prometheus/v1/metrics' ) ); ?></code> <em>(always works)</em></li>
+                        <li><strong>Query Parameter:</strong> <code><?php echo esc_url( home_url( '/?wp_prometheus_metrics=1' ) ); ?></code> <em>(always works)</em></li>
+                        <li><strong>Short Path:</strong> <code><?php echo esc_url( home_url( '/metrics' ) ); ?></code> <em>(alternative clean URL)</em></li>
                     </ul>
                     
                     <p><em>All endpoints are protected by authentication and return the same metrics data in Prometheus format.</em></p>
@@ -685,33 +761,33 @@ if ( ! class_exists( 'WP_Prometheus_Metrics' ) ) {
                 <div class="card">
                     <h2>Usage Examples</h2>
                     
-                    <h3>Primary REST API Endpoint</h3>
+                    <h3>Primary Endpoint (Clean URL)</h3>
                     <h4>cURL with Bearer Token</h4>
                     <div class="code-block">
-                        <code id="curl-bearer">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" <?php echo esc_url( $endpoint_url ); ?></code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-bearer')">Copy</button>
+                        <code id="curl-primary">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/prometheus/metrics' ) ); ?>"</code>
+                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-primary')">Copy</button>
                     </div>
                     
                     <h4>cURL with API Key</h4>
                     <div class="code-block">
-                        <code id="curl-apikey">curl "<?php echo esc_url( $endpoint_url ); ?>?api_key=<?php echo esc_attr( $auth_settings['api_key'] ); ?>"</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-apikey')">Copy</button>
+                        <code id="curl-apikey-primary">curl "<?php echo esc_url( home_url( '/prometheus/metrics' ) ); ?>?api_key=<?php echo esc_attr( $auth_settings['api_key'] ); ?>"</code>
+                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-apikey-primary')">Copy</button>
                     </div>
                     
-                    <h3>Alternative Endpoints (No Apache Rewrite Required)</h3>
-                    <h4>Fallback URL (Always Works)</h4>
+                    <h3>Fallback Endpoints</h3>
+                    <h4>REST API Endpoint</h4>
                     <div class="code-block">
-                        <code id="curl-fallback">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/index.php?rest_route=/wp-prometheus/v1/metrics' ) ); ?>"</code>
+                        <code id="curl-rest">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( $endpoint_url ); ?>"</code>
+                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-rest')">Copy</button>
+                    </div>
+                    
+                    <h4>Universal Fallback (Always Works)</h4>
+                    <div class="code-block">
+                        <code id="curl-fallback">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/?wp_prometheus_metrics=1' ) ); ?>"</code>
                         <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-fallback')">Copy</button>
                     </div>
                     
-                    <h4>Query Parameter Method</h4>
-                    <div class="code-block">
-                        <code id="curl-query">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/?wp_prometheus_metrics=1' ) ); ?>"</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-query')">Copy</button>
-                    </div>
-                    
-                    <h4>Simple Path (if permalinks enabled)</h4>
+                    <h4>Alternative Clean URL</h4>
                     <div class="code-block">
                         <code id="curl-simple">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/metrics' ) ); ?>"</code>
                         <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-simple')">Copy</button>
@@ -725,32 +801,30 @@ scrape_configs:
   - job_name: 'wordpress'
     static_configs:
       - targets: ['<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>']
-    metrics_path: '/wp-json/wp-prometheus/v1/metrics'
+    metrics_path: '/prometheus/metrics'
     authorization:
       type: Bearer
       credentials: '<?php echo esc_attr( $auth_settings['bearer_token'] ); ?>'</pre>
                         <button type="button" class="button copy-btn" onclick="copyToClipboard('prometheus-config')">Copy</button>
                     </div>
                     
-                    <h4>Fallback Configuration (No Rewrite)</h4>
+                    <h4>REST API Fallback Configuration</h4>
                     <div class="code-block">
-                        <pre id="prometheus-fallback"># prometheus.yml (fallback)
+                        <pre id="prometheus-fallback"># prometheus.yml (REST API fallback)
 scrape_configs:
   - job_name: 'wordpress'
     static_configs:
       - targets: ['<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>']
-    metrics_path: '/index.php'
-    params:
-      rest_route: ['/wp-prometheus/v1/metrics']
+    metrics_path: '/wp-json/wp-prometheus/v1/metrics'
     authorization:
       type: Bearer
       credentials: '<?php echo esc_attr( $auth_settings['bearer_token'] ); ?>'</pre>
                         <button type="button" class="button copy-btn" onclick="copyToClipboard('prometheus-fallback')">Copy</button>
                     </div>
                     
-                    <h4>Alternative Configuration (Query Parameter)</h4>
+                    <h4>Universal Fallback Configuration (Always Works)</h4>
                     <div class="code-block">
-                        <pre id="prometheus-alt"># prometheus.yml (alternative)
+                        <pre id="prometheus-alt"># prometheus.yml (universal fallback)
 scrape_configs:
   - job_name: 'wordpress'
     static_configs:
@@ -989,6 +1063,9 @@ scrape_configs:
          * Activation hook: flush rewrite rules so REST routes are available.
          */
         public static function on_activate() {
+            // Add our rewrite rules first
+            self::add_rewrite_rules();
+            // Then flush to make them active
             flush_rewrite_rules();
             // Generate default auth tokens if they don't exist
             self::ensure_auth_tokens();
@@ -998,8 +1075,10 @@ scrape_configs:
          * Deactivation hook: flush rewrite rules to cleanup.
          */
         public static function on_deactivate() {
-            flush_rewrite_rules();
+            // Clean up transients
             delete_transient( self::CACHE_KEY );
+            // Flush rewrite rules to remove our custom rules
+            flush_rewrite_rules();
         }
 
         /**
@@ -1285,41 +1364,36 @@ scrape_configs:
                     'total_failed' => 0
                 );
                 
-                // Try to use WordPress native Site Health
-                $health_tests = self::get_wordpress_health_tests();
+                // ALWAYS use the same data source as details
+                $details = self::get_health_check_details();
                 
-                if ( ! empty( $health_tests ) ) {
-                    // Process real WordPress health test results
-                    foreach ( $health_tests as $test_name => $test_result ) {
-                        if ( ! is_array( $test_result ) || ! isset( $test_result['status'] ) ) {
-                            continue;
-                        }
-                        
-                        $status = $test_result['status'];
-                        $badge = isset( $test_result['badge']['label'] ) ? strtolower( $test_result['badge']['label'] ) : '';
-                        
-                        // Count by status
-                        if ( isset( $results[ $status ] ) ) {
-                            $results[ $status ]++;
-                        }
-                        
-                        // Count by category
-                        if ( $status !== 'good' ) {
-                            if ( strpos( $badge, 'security' ) !== false || strpos( $test_name, 'security' ) !== false ) {
-                                $results['security']++;
-                            } elseif ( strpos( $badge, 'performance' ) !== false || strpos( $test_name, 'performance' ) !== false ) {
-                                $results['performance']++;
-                            }
-                            
-                            $results['total_failed']++;
-                        }
+                foreach ( $details as $detail ) {
+                    $status = $detail['status'];
+                    $category = $detail['category'];
+                    
+                    // Count by status
+                    if ( $status === 'critical' ) {
+                        $results['critical']++;
+                    } elseif ( $status === 'recommended' ) {
+                        $results['recommended']++;
+                    } elseif ( $status === 'good' ) {
+                        $results['good']++;
                     }
                     
-                    return $results;
+                    // Count by category (only for non-good status)
+                    if ( $status !== 'good' ) {
+                        if ( $category === 'security' ) {
+                            $results['security']++;
+                        } elseif ( $category === 'performance' ) {
+                            $results['performance']++;
+                        }
+                    }
                 }
                 
-                // Fallback to enhanced custom checks
-                return self::get_enhanced_health_checks();
+                // Total failed is critical + recommended
+                $results['total_failed'] = $results['critical'] + $results['recommended'];
+                
+                return $results;
                 
             } catch ( Exception $e ) {
                 return self::get_enhanced_health_checks();
@@ -1333,57 +1407,74 @@ scrape_configs:
          */
         private static function get_wordpress_health_tests() {
             try {
-                // Load required WordPress files
-                if ( ! function_exists( 'get_site_health_tests' ) ) {
-                    if ( file_exists( ABSPATH . 'wp-admin/includes/class-wp-site-health.php' ) ) {
-                        require_once ABSPATH . 'wp-admin/includes/class-wp-site-health.php';
+                // Load required WordPress files for Site Health
+                if ( ! class_exists( 'WP_Site_Health' ) ) {
+                    // Load all necessary files
+                    $files_to_load = array(
+                        ABSPATH . 'wp-admin/includes/class-wp-site-health.php',
+                        ABSPATH . 'wp-admin/includes/class-wp-site-health-auto-updates.php',
+                        ABSPATH . 'wp-admin/includes/update.php',
+                        ABSPATH . 'wp-admin/includes/misc.php',
+                        ABSPATH . 'wp-admin/includes/plugin.php',
+                        ABSPATH . 'wp-admin/includes/theme.php'
+                    );
+                    
+                    foreach ( $files_to_load as $file ) {
+                        if ( file_exists( $file ) ) {
+                            require_once $file;
+                        }
                     }
                 }
                 
-                // Try different approaches to get health tests
                 $tests = array();
                 
-                // Method 1: Direct instantiation
+                // Use WordPress Site Health if available
                 if ( class_exists( 'WP_Site_Health' ) ) {
                     $site_health = new WP_Site_Health();
                     
                     if ( method_exists( $site_health, 'get_tests' ) ) {
                         $all_tests = $site_health->get_tests();
                         
-                        // Execute direct tests
+                        // Execute direct tests (synchronous)
                         if ( isset( $all_tests['direct'] ) && is_array( $all_tests['direct'] ) ) {
                             foreach ( $all_tests['direct'] as $test_name => $test_config ) {
                                 if ( isset( $test_config['test'] ) && is_callable( $test_config['test'] ) ) {
                                     try {
+                                        // Skip potentially problematic tests
+                                        if ( strpos( $test_name, 'async' ) !== false ||
+                                             strpos( $test_name, 'loopback' ) !== false ) {
+                                            continue;
+                                        }
+                                        
                                         $test_result = call_user_func( $test_config['test'] );
                                         if ( is_array( $test_result ) && isset( $test_result['status'] ) ) {
-                                            $tests[ $test_name ] = $test_result;
+                                            // Normalize WordPress status names to our standard
+                                            $status = $test_result['status'];
+                                            if ( $status === 'good' || $status === 'info' ) {
+                                                $status = 'good';
+                                            } elseif ( $status === 'recommended' ) {
+                                                $status = 'recommended';
+                                            } elseif ( $status === 'critical' ) {
+                                                $status = 'critical';
+                                            }
+                                            
+                                            $tests[ $test_name ] = array(
+                                                'status' => $status,
+                                                'label' => isset( $test_result['label'] ) ? $test_result['label'] : $test_name,
+                                                'description' => isset( $test_result['description'] ) ? $test_result['description'] : '',
+                                                'actions' => isset( $test_result['actions'] ) ? $test_result['actions'] : '',
+                                                'badge' => isset( $test_result['badge'] ) ? $test_result['badge'] : array(),
+                                            );
                                         }
                                     } catch ( Exception $e ) {
+                                        // Skip failed tests
                                         continue;
                                     }
                                 }
                             }
                         }
-                    }
-                }
-                
-                // Method 2: Use WordPress hooks/filters if available
-                if ( empty( $tests ) && function_exists( 'apply_filters' ) ) {
-                    $registered_tests = apply_filters( 'site_status_tests', array() );
-                    if ( is_array( $registered_tests ) && isset( $registered_tests['direct'] ) ) {
-                        foreach ( $registered_tests['direct'] as $test_name => $test_config ) {
-                            if ( isset( $test_config['test'] ) && is_callable( $test_config['test'] ) ) {
-                                try {
-                                    $test_result = call_user_func( $test_config['test'] );
-                                    if ( is_array( $test_result ) && isset( $test_result['status'] ) ) {
-                                        $tests[ $test_name ] = $test_result;
-                                    }
-                                } catch ( Exception $e ) {
-                                    continue;
-                                }
-                            }
-                        }
+                        
+                        // Note: We skip async tests for performance reasons in metrics collection
                     }
                 }
                 
@@ -1396,10 +1487,14 @@ scrape_configs:
         
         /**
          * Enhanced health checks with more comprehensive WordPress-style checks.
+         * This function counts based on the same logic as get_enhanced_health_check_details().
          *
          * @return array Enhanced health check results
          */
         private static function get_enhanced_health_checks() {
+            // Get detailed checks and count them
+            $details = self::get_enhanced_health_check_details();
+            
             $results = array(
                 'critical'    => 0,
                 'recommended' => 0,
@@ -1409,97 +1504,29 @@ scrape_configs:
                 'total_failed' => 0
             );
             
-            $critical_issues = 0;
-            $recommended_issues = 0;
-            $security_issues = 0;
-            $performance_issues = 0;
-            
-            // Security checks
-            
-            // File editing check
-            if ( ! defined( 'DISALLOW_FILE_EDIT' ) || ! DISALLOW_FILE_EDIT ) {
-                $security_issues++;
-                $recommended_issues++;
-            }
-            
-            // Debug mode check
-            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                $security_issues++;
-                $recommended_issues++;
-            }
-            
-            // WordPress version check
-            if ( function_exists( 'get_core_updates' ) ) {
-                try {
-                    $core_updates = get_core_updates();
-                    if ( is_array( $core_updates ) && ! empty( $core_updates ) ) {
-                        $latest_update = $core_updates[0];
-                        if ( isset( $latest_update->response ) && $latest_update->response === 'upgrade' ) {
-                            $security_issues++;
-                            $critical_issues++;
-                        }
-                    }
-                } catch ( Exception $e ) {
-                    // Ignore errors
+            foreach ( $details as $detail ) {
+                $status = $detail['status'];
+                $category = $detail['category'];
+                
+                // Count by status
+                if ( $status === 'critical' ) {
+                    $results['critical']++;
+                } elseif ( $status === 'recommended' ) {
+                    $results['recommended']++;
+                } elseif ( $status === 'good' ) {
+                    $results['good']++;
+                }
+                
+                // Count by category (regardless of status)
+                if ( $category === 'security' ) {
+                    $results['security']++;
+                } elseif ( $category === 'performance' ) {
+                    $results['performance']++;
                 }
             }
             
-            // Plugin updates check
-            $plugin_updates = get_site_transient( 'update_plugins' );
-            if ( isset( $plugin_updates->response ) && ! empty( $plugin_updates->response ) ) {
-                $security_issues++;
-                $recommended_issues++;
-            }
-            
-            // Performance checks
-            
-            // PHP version check
-            if ( version_compare( PHP_VERSION, '7.4', '<' ) ) {
-                $performance_issues++;
-                $critical_issues++;
-            } elseif ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
-                $performance_issues++;
-                $recommended_issues++;
-            }
-            
-            // Memory limit check
-            $memory_limit = ini_get( 'memory_limit' );
-            if ( $memory_limit ) {
-                $memory_bytes = self::convert_to_bytes( $memory_limit );
-                if ( $memory_bytes < 64 * 1024 * 1024 ) { // Less than 64MB
-                    $performance_issues++;
-                    $critical_issues++;
-                } elseif ( $memory_bytes < 128 * 1024 * 1024 ) { // Less than 128MB
-                    $performance_issues++;
-                    $recommended_issues++;
-                }
-            }
-            
-            // Database connection check
-            global $wpdb;
-            if ( ! empty( $wpdb->last_error ) ) {
-                $critical_issues++;
-            }
-            
-            // HTTPS check
-            if ( ! is_ssl() ) {
-                $security_issues++;
-                $recommended_issues++;
-            }
-            
-            // Set final counts
-            $results['critical'] = $critical_issues;
-            $results['recommended'] = $recommended_issues;
-            $results['security'] = $security_issues;
-            $results['performance'] = $performance_issues;
-            $results['total_failed'] = $critical_issues + $recommended_issues;
-            
-            // Good count (if no major issues)
-            if ( $critical_issues === 0 && $recommended_issues === 0 ) {
-                $results['good'] = 5; // Assume 5 tests passed
-            } else {
-                $results['good'] = max( 0, 10 - $results['total_failed'] ); // Estimate good tests
-            }
+            // Total failed is critical + recommended
+            $results['total_failed'] = $results['critical'] + $results['recommended'];
             
             return $results;
         }
@@ -1585,6 +1612,145 @@ scrape_configs:
         }
 
         /**
+         * Add custom rewrite rules for prometheus endpoints.
+         * This provides clean URLs like /prometheus/metrics and /metrics
+         */
+        public static function add_rewrite_rules() {
+            // Add rewrite rule for /prometheus/metrics (with and without trailing slash)
+            add_rewrite_rule(
+                '^prometheus/metrics/?$',
+                'index.php?wp_prometheus_endpoint=metrics',
+                'top'
+            );
+            
+            // Add rewrite rule for /metrics (with and without trailing slash)
+            add_rewrite_rule(
+                '^metrics/?$',
+                'index.php?wp_prometheus_endpoint=metrics',
+                'top'
+            );
+            
+            // Prevent WordPress from doing canonical redirects for our endpoints
+            add_filter( 'redirect_canonical', array( __CLASS__, 'disable_canonical_redirect_for_metrics' ), 10, 2 );
+        }
+
+        /**
+         * Check if rewrite rules need to be flushed and do so if necessary.
+         * This ensures our custom endpoints work even if rewrite rules were cleared.
+         */
+        public static function maybe_flush_rewrite_rules() {
+            // Get current rewrite rules
+            $rules = get_option( 'rewrite_rules' );
+            
+            // Check if our rules exist
+            $has_prometheus_rule = false;
+            $has_metrics_rule = false;
+            
+            if ( is_array( $rules ) ) {
+                foreach ( $rules as $pattern => $rewrite ) {
+                    if ( strpos( $pattern, 'prometheus/metrics' ) !== false ) {
+                        $has_prometheus_rule = true;
+                    }
+                    if ( strpos( $pattern, '^metrics' ) !== false && strpos( $rewrite, 'wp_prometheus_endpoint' ) !== false ) {
+                        $has_metrics_rule = true;
+                    }
+                }
+            }
+            
+            // If rules are missing, flush to regenerate them
+            if ( ! $has_prometheus_rule || ! $has_metrics_rule ) {
+                flush_rewrite_rules();
+            }
+        }
+
+        /**
+         * Disable canonical redirects for our metrics endpoints.
+         * This prevents WordPress from redirecting /prometheus/metrics to /prometheus/metrics/
+         *
+         * @param string $redirect_url The redirect URL.
+         * @param string $requested_url The requested URL.
+         * @return string|false The redirect URL or false to disable redirect.
+         */
+        public static function disable_canonical_redirect_for_metrics( $redirect_url, $requested_url ) {
+            // Parse the requested URL
+            $path = wp_parse_url( $requested_url, PHP_URL_PATH );
+            
+            // If this is a request to our metrics endpoints, disable canonical redirect
+            if ( $path === '/prometheus/metrics' || $path === '/metrics' ) {
+                return false;
+            }
+            
+            return $redirect_url;
+        }
+
+        /**
+         * Add custom query variables for prometheus endpoints.
+         *
+         * @param array $vars Current query variables
+         * @return array Modified query variables
+         */
+        public static function add_query_vars( $vars ) {
+            $vars[] = 'wp_prometheus_endpoint';
+            return $vars;
+        }
+
+        /**
+         * Handle prometheus endpoint requests using template_redirect.
+         * This is called after query parsing but before template loading.
+         */
+        public static function handle_prometheus_request() {
+            $endpoint = get_query_var( 'wp_prometheus_endpoint' );
+            
+            if ( $endpoint === 'metrics' ) {
+                // Create a fake REST request object for authentication
+                $request = new WP_REST_Request( 'GET', '/wp-prometheus/v1/metrics' );
+                
+                // Copy query parameters
+                // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public metrics endpoint with custom authentication  
+                foreach ( $_GET as $key => $value ) {
+                    if ( $key !== 'wp_prometheus_endpoint' ) {
+                        $request->set_param( $key, sanitize_text_field( wp_unslash( $value ) ) );
+                    }
+                }
+                
+                // Copy authorization header if available
+                $auth_header = null;
+                if ( isset( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+                    $auth_header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) );
+                } elseif ( function_exists( 'getallheaders' ) ) {
+                    $headers = getallheaders();
+                    if ( isset( $headers['Authorization'] ) ) {
+                        $auth_header = $headers['Authorization'];
+                    }
+                }
+                
+                if ( $auth_header ) {
+                    $request->set_header( 'authorization', $auth_header );
+                }
+                
+                // Check authentication
+                $auth_result = self::check_auth( $request );
+                if ( is_wp_error( $auth_result ) ) {
+                    http_response_code( 401 );
+                    header( 'Content-Type: application/json' );
+                    echo wp_json_encode( array(
+                        'code'    => $auth_result->get_error_code(),
+                        'message' => $auth_result->get_error_message(),
+                        'data'    => $auth_result->get_error_data()
+                    ) );
+                    exit;
+                }
+                
+                // Generate and serve metrics
+                $metrics = self::build_metrics();
+                header( 'Content-Type: text/plain; charset=' . get_option( 'blog_charset' ) );
+                // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw metrics output for Prometheus format
+                echo $metrics;
+                exit;
+            }
+        }
+
+        /**
          * Escape a string for use as a Prometheus label value.
          *
          * Escapes backslashes, newlines and double quotes per Prometheus exposition format.
@@ -1595,6 +1761,274 @@ scrape_configs:
         private static function escape_label_value( $val ) {
             $val = (string) $val;
             return str_replace( array( '\\', "\n", '"' ), array( '\\\\', '\\n', '\\"' ), $val );
+        }
+
+        /**
+         * Get detailed Site Health check results with individual test information.
+         *
+         * @return array Detailed health check results with test names and descriptions
+         */
+        private static function get_health_check_details() {
+            try {
+                $details = array();
+                
+                // Try to use WordPress native Site Health
+                $health_tests = self::get_wordpress_health_tests();
+                
+                if ( ! empty( $health_tests ) ) {
+                    // Process real WordPress health test results
+                    foreach ( $health_tests as $test_name => $test_result ) {
+                        if ( ! is_array( $test_result ) || ! isset( $test_result['status'] ) ) {
+                            continue;
+                        }
+                        
+                        $status = $test_result['status'];
+                        $badge = isset( $test_result['badge']['label'] ) ? strtolower( $test_result['badge']['label'] ) : '';
+                        $label = isset( $test_result['label'] ) ? $test_result['label'] : $test_name;
+                        $description = isset( $test_result['description'] ) ? wp_strip_all_tags( $test_result['description'] ) : '';
+                        
+                        // Determine category based on test name and content
+                        $category = 'general';
+                        
+                        // Security-related tests
+                        if ( strpos( $test_name, 'https' ) !== false ||
+                             strpos( $test_name, 'ssl' ) !== false ||
+                             strpos( $test_name, 'security' ) !== false ||
+                             strpos( $test_name, 'file_edit' ) !== false ||
+                             strpos( $test_name, 'debug' ) !== false ||
+                             strpos( $test_name, 'update' ) !== false ||
+                             strpos( $test_name, 'version' ) !== false ||
+                             strpos( $badge, 'security' ) !== false ) {
+                            $category = 'security';
+                        }
+                        // Performance-related tests  
+                        elseif ( strpos( $test_name, 'php' ) !== false ||
+                                strpos( $test_name, 'memory' ) !== false ||
+                                strpos( $test_name, 'database' ) !== false ||
+                                strpos( $test_name, 'performance' ) !== false ||
+                                strpos( $test_name, 'cache' ) !== false ||
+                                strpos( $badge, 'performance' ) !== false ) {
+                            $category = 'performance';
+                        }
+                        
+                        $details[] = array(
+                            'test' => $test_name,
+                            'label' => $label,
+                            'status' => $status,
+                            'category' => $category,
+                            'description' => substr( $description, 0, 120 ) // Limit description length
+                        );
+                    }
+                    
+                    return $details;
+                }
+                
+                // Fallback to enhanced custom checks
+                return self::get_enhanced_health_check_details();
+                
+            } catch ( Exception $e ) {
+                return self::get_enhanced_health_check_details();
+            }
+        }
+        
+        /**
+         * Enhanced health check details with specific test information.
+         *
+         * @return array Enhanced health check details
+         */
+        private static function get_enhanced_health_check_details() {
+            $details = array();
+            
+            // Security checks
+            
+            // File editing check
+            if ( ! defined( 'DISALLOW_FILE_EDIT' ) || ! DISALLOW_FILE_EDIT ) {
+                $details[] = array(
+                    'test' => 'file_editing',
+                    'label' => 'File Editing',
+                    'status' => 'recommended',
+                    'category' => 'security',
+                    'description' => 'File editing should be disabled in production environments'
+                );
+            } else {
+                $details[] = array(
+                    'test' => 'file_editing',
+                    'label' => 'File Editing',
+                    'status' => 'good',
+                    'category' => 'security',
+                    'description' => 'File editing is properly disabled'
+                );
+            }
+            
+            // Debug mode check
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                $details[] = array(
+                    'test' => 'debug_mode',
+                    'label' => 'Debug Mode',
+                    'status' => 'recommended',
+                    'category' => 'security',
+                    'description' => 'Debug mode should be disabled in production'
+                );
+            } else {
+                $details[] = array(
+                    'test' => 'debug_mode',
+                    'label' => 'Debug Mode',
+                    'status' => 'good',
+                    'category' => 'security',
+                    'description' => 'Debug mode is properly disabled'
+                );
+            }
+            
+            // WordPress version check
+            if ( function_exists( 'get_core_updates' ) ) {
+                try {
+                    $core_updates = get_core_updates();
+                    if ( is_array( $core_updates ) && ! empty( $core_updates ) ) {
+                        $latest_update = $core_updates[0];
+                        if ( isset( $latest_update->response ) && $latest_update->response === 'upgrade' ) {
+                            $details[] = array(
+                                'test' => 'wordpress_version',
+                                'label' => 'WordPress Version',
+                                'status' => 'critical',
+                                'category' => 'security',
+                                'description' => 'WordPress core update available'
+                            );
+                        } else {
+                            $details[] = array(
+                                'test' => 'wordpress_version',
+                                'label' => 'WordPress Version',
+                                'status' => 'good',
+                                'category' => 'security',
+                                'description' => 'WordPress is up to date'
+                            );
+                        }
+                    }
+                } catch ( Exception $e ) {
+                    // Ignore errors
+                }
+            }
+            
+            // Plugin updates check
+            $plugin_updates = get_site_transient( 'update_plugins' );
+            if ( isset( $plugin_updates->response ) && ! empty( $plugin_updates->response ) ) {
+                $update_count = count( $plugin_updates->response );
+                $details[] = array(
+                    'test' => 'plugin_updates',
+                    'label' => 'Plugin Updates',
+                    'status' => 'recommended',
+                    'category' => 'security',
+                    'description' => $update_count . ' plugin(s) need updates'
+                );
+            } else {
+                $details[] = array(
+                    'test' => 'plugin_updates',
+                    'label' => 'Plugin Updates',
+                    'status' => 'good',
+                    'category' => 'security',
+                    'description' => 'All plugins are up to date'
+                );
+            }
+            
+            // Performance checks
+            
+            // PHP version check
+            if ( version_compare( PHP_VERSION, '7.4', '<' ) ) {
+                $details[] = array(
+                    'test' => 'php_version',
+                    'label' => 'PHP Version',
+                    'status' => 'critical',
+                    'category' => 'performance',
+                    'description' => 'PHP version ' . PHP_VERSION . ' is outdated and unsupported'
+                );
+            } elseif ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
+                $details[] = array(
+                    'test' => 'php_version',
+                    'label' => 'PHP Version',
+                    'status' => 'recommended',
+                    'category' => 'performance',
+                    'description' => 'PHP version ' . PHP_VERSION . ' should be updated to 8.0+'
+                );
+            } else {
+                $details[] = array(
+                    'test' => 'php_version',
+                    'label' => 'PHP Version',
+                    'status' => 'good',
+                    'category' => 'performance',
+                    'description' => 'PHP version ' . PHP_VERSION . ' is current'
+                );
+            }
+            
+            // Memory limit check
+            $memory_limit = ini_get( 'memory_limit' );
+            if ( $memory_limit ) {
+                $memory_bytes = self::convert_to_bytes( $memory_limit );
+                if ( $memory_bytes < 64 * 1024 * 1024 ) { // Less than 64MB
+                    $details[] = array(
+                        'test' => 'php_memory_limit',
+                        'label' => 'PHP Memory Limit',
+                        'status' => 'critical',
+                        'category' => 'performance',
+                        'description' => 'Memory limit ' . $memory_limit . ' is too low'
+                    );
+                } elseif ( $memory_bytes < 128 * 1024 * 1024 ) { // Less than 128MB
+                    $details[] = array(
+                        'test' => 'php_memory_limit',
+                        'label' => 'PHP Memory Limit',
+                        'status' => 'recommended',
+                        'category' => 'performance',
+                        'description' => 'Memory limit ' . $memory_limit . ' could be increased'
+                    );
+                } else {
+                    $details[] = array(
+                        'test' => 'php_memory_limit',
+                        'label' => 'PHP Memory Limit',
+                        'status' => 'good',
+                        'category' => 'performance',
+                        'description' => 'Memory limit ' . $memory_limit . ' is adequate'
+                    );
+                }
+            }
+            
+            // Database connection check
+            global $wpdb;
+            if ( ! empty( $wpdb->last_error ) ) {
+                $details[] = array(
+                    'test' => 'database_connection',
+                    'label' => 'Database Connection',
+                    'status' => 'critical',
+                    'category' => 'general',
+                    'description' => 'Database connection has errors'
+                );
+            } else {
+                $details[] = array(
+                    'test' => 'database_connection',
+                    'label' => 'Database Connection',
+                    'status' => 'good',
+                    'category' => 'general',
+                    'description' => 'Database connection is working properly'
+                );
+            }
+            
+            // HTTPS check
+            if ( ! is_ssl() ) {
+                $details[] = array(
+                    'test' => 'https_status',
+                    'label' => 'HTTPS Status',
+                    'status' => 'recommended',
+                    'category' => 'security',
+                    'description' => 'Site should use HTTPS for better security'
+                );
+            } else {
+                $details[] = array(
+                    'test' => 'https_status',
+                    'label' => 'HTTPS Status',
+                    'status' => 'good',
+                    'category' => 'security',
+                    'description' => 'Site is properly secured with HTTPS'
+                );
+            }
+            
+            return $details;
         }
     }
 

@@ -1,4 +1,53 @@
 {
+    "__inputs": [
+        {
+            "name": "DS_PROMETHEUS",
+            "label": "Prometheus",
+            "description": "",
+            "type": "datasource",
+            "pluginId": "prometheus",
+            "pluginName": "Prometheus"
+        }
+    ],
+    "__elements": {},
+    "__requires": [
+        {
+            "type": "grafana",
+            "id": "grafana",
+            "name": "Grafana",
+            "version": "11.5.2"
+        },
+        {
+            "type": "panel",
+            "id": "piechart",
+            "name": "Pie chart",
+            "version": ""
+        },
+        {
+            "type": "datasource",
+            "id": "prometheus",
+            "name": "Prometheus",
+            "version": "1.0.0"
+        },
+        {
+            "type": "panel",
+            "id": "stat",
+            "name": "Stat",
+            "version": ""
+        },
+        {
+            "type": "panel",
+            "id": "table",
+            "name": "Table",
+            "version": ""
+        },
+        {
+            "type": "panel",
+            "id": "timeseries",
+            "name": "Time series",
+            "version": ""
+        }
+    ],
     "annotations": {
         "list": [
             {
@@ -27,7 +76,6 @@
     "graphTooltip": 0,
     "id": null,
     "links": [],
-    "liveNow": false,
     "panels": [
         {
             "datasource": {
@@ -67,6 +115,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -74,14 +123,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_users{wp_site=~\"$website\", role=\"total\"})",
@@ -132,6 +183,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -139,14 +191,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_pages{wp_site=~\"$website\", status=\"published\"})",
@@ -197,6 +251,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -204,14 +259,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_posts{wp_site=~\"$website\", status=\"published\"})",
@@ -262,6 +319,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -269,14 +327,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_media{wp_site=~\"$website\"})",
@@ -335,6 +395,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -342,14 +403,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"critical\"})",
@@ -408,6 +471,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -415,14 +479,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"total_failed\"})",
@@ -444,8 +510,8 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "yellow"
+                        "fixedColor": "yellow",
+                        "mode": "fixed"
                     },
                     "mappings": [],
                     "noValue": "0",
@@ -468,7 +534,7 @@
             },
             "gridPos": {
                 "h": 5,
-                "w": 6,
+                "w": 4,
                 "x": 0,
                 "y": 6
             },
@@ -478,6 +544,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -485,14 +552,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"recommended\"})",
@@ -514,8 +583,8 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "green"
+                        "fixedColor": "green",
+                        "mode": "fixed"
                     },
                     "mappings": [],
                     "noValue": "0",
@@ -534,8 +603,8 @@
             },
             "gridPos": {
                 "h": 5,
-                "w": 6,
-                "x": 6,
+                "w": 4,
+                "x": 4,
                 "y": 6
             },
             "id": 8,
@@ -544,6 +613,7 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -551,14 +621,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"good\"})",
@@ -580,8 +652,8 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "orange"
+                        "fixedColor": "orange",
+                        "mode": "fixed"
                     },
                     "mappings": [],
                     "noValue": "0",
@@ -604,8 +676,8 @@
             },
             "gridPos": {
                 "h": 5,
-                "w": 6,
-                "x": 12,
+                "w": 8,
+                "x": 8,
                 "y": 6
             },
             "id": 9,
@@ -614,6 +686,7 @@
                 "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -621,14 +694,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value_and_name",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_health_check{wp_site=~\"$website\", category=\"security\"}",
@@ -650,8 +725,8 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "fixed",
-                        "fixedColor": "blue"
+                        "fixedColor": "blue",
+                        "mode": "fixed"
                     },
                     "mappings": [],
                     "noValue": "0",
@@ -674,8 +749,8 @@
             },
             "gridPos": {
                 "h": 5,
-                "w": 6,
-                "x": 18,
+                "w": 8,
+                "x": 16,
                 "y": 6
             },
             "id": 10,
@@ -684,6 +759,7 @@
                 "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -691,14 +767,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value_and_name",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_health_check{wp_site=~\"$website\", category=\"performance\"}",
@@ -710,6 +788,217 @@
             ],
             "title": "Performance Issues by Site",
             "type": "stat"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+            },
+            "description": "Detailed health check failures and recommendations by site - shows specific issues that need attention",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "custom": {
+                        "align": "auto",
+                        "cellOptions": {
+                            "type": "auto"
+                        },
+                        "filterable": true,
+                        "inspect": false
+                    },
+                    "mappings": [
+                        {
+                            "options": {
+                                "0": {
+                                    "color": "red",
+                                    "index": 0,
+                                    "text": "FAILED"
+                                },
+                                "1": {
+                                    "color": "green",
+                                    "index": 1,
+                                    "text": "PASSED"
+                                }
+                            },
+                            "type": "value"
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Status"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.cellOptions",
+                                "value": {
+                                    "mode": "basic",
+                                    "type": "color-background"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Website"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.width",
+                                "value": 214
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Status Type"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.width",
+                                "value": 148
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Category"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.width",
+                                "value": 170
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Description"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.width",
+                                "value": 607
+                            }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 11
+            },
+            "id": 19,
+            "options": {
+                "cellHeight": "sm",
+                "footer": {
+                    "countRows": false,
+                    "fields": "",
+                    "reducer": [
+                        "sum"
+                    ],
+                    "show": false
+                },
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "desc": false,
+                        "displayName": "Status"
+                    }
+                ]
+            },
+            "pluginVersion": "11.5.2",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
+                    },
+                    "editorMode": "builder",
+                    "expr": "wp_health_check_detail{wp_site=~\"$website\"}",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "__auto",
+                    "range": false,
+                    "refId": "A"
+                }
+            ],
+            "title": "Health Check Details - Failed Tests",
+            "transformations": [
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true,
+                            "__name__": true,
+                            "container": true,
+                            "endpoint": true,
+                            "instance": true,
+                            "job": true,
+                            "namespace": true,
+                            "pod": true,
+                            "service": true,
+                            "test_name": true
+                        },
+                        "indexByName": {
+                            "Value": 4,
+                            "category": 2,
+                            "description": 3,
+                            "status": 1,
+                            "wp_site": 0
+                        },
+                        "renameByName": {
+                            "Value": "Status",
+                            "category": "Category",
+                            "description": "Description",
+                            "status": "Status Type",
+                            "wp_site": "Website"
+                        }
+                    }
+                },
+                {
+                    "id": "filterByValue",
+                    "options": {
+                        "filters": [
+                            {
+                                "config": {
+                                    "id": "equal",
+                                    "options": {
+                                        "value": 0
+                                    }
+                                },
+                                "fieldName": "Status"
+                            }
+                        ],
+                        "match": "any",
+                        "type": "include"
+                    }
+                }
+            ],
+            "type": "table"
         },
         {
             "datasource": {
@@ -771,10 +1060,10 @@
                 ]
             },
             "gridPos": {
-                "h": 4,
-                "w": 12,
+                "h": 7,
+                "w": 11,
                 "x": 0,
-                "y": 11
+                "y": 19
             },
             "id": 11,
             "options": {
@@ -782,6 +1071,7 @@
                 "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -789,14 +1079,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value_and_name",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_database_size{wp_site=~\"$website\"}",
@@ -818,7 +1110,8 @@
                 },
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_autoload_size{wp_site=~\"$website\"}",
@@ -879,10 +1172,10 @@
                 ]
             },
             "gridPos": {
-                "h": 4,
-                "w": 12,
-                "x": 12,
-                "y": 11
+                "h": 7,
+                "w": 13,
+                "x": 11,
+                "y": 19
             },
             "id": 18,
             "options": {
@@ -890,6 +1183,7 @@
                 "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -897,14 +1191,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value_and_name",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_directory_size{wp_site=~\"$website\", directory=\"total\"}",
@@ -926,7 +1222,8 @@
                 },
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_directory_size{wp_site=~\"$website\", directory=\"themes\"}",
@@ -953,7 +1250,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "${DS_PROMETHEUS}"
             },
             "description": "WordPress and PHP configuration per site",
             "fieldConfig": {
@@ -1019,10 +1316,10 @@
                 ]
             },
             "gridPos": {
-                "h": 8,
+                "h": 6,
                 "w": 24,
                 "x": 0,
-                "y": 15
+                "y": 26
             },
             "id": 12,
             "options": {
@@ -1037,7 +1334,7 @@
                 },
                 "showHeader": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
@@ -1053,10 +1350,11 @@
                 },
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_php_info{wp_site=~\"$website\", type=\"version\"}",
+                    "expr": "wp_php_version{wp_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "__auto",
@@ -1068,22 +1366,23 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_php_info{wp_site=~\"$website\", type=\"memory_limit\"}",
+                    "expr": "wp_memory_limit_display{wp_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
-                    "legendFormat": "__auto",
+                    "legendFormat": "Memory Limit: {{value}}",
                     "range": false,
                     "refId": "C"
                 },
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_php_info{wp_site=~\"$website\", type=\"upload_max_filesize\"}",
+                    "expr": "wp_upload_max_display{wp_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
-                    "legendFormat": "__auto",
+                    "legendFormat": "Upload Max: {{value}}",
                     "range": false,
                     "refId": "D"
                 },
@@ -1092,22 +1391,23 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_php_info{wp_site=~\"$website\", type=\"post_max_size\"}",
+                    "expr": "wp_post_max_display{wp_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
-                    "legendFormat": "__auto",
+                    "legendFormat": "Post Max: {{value}}",
                     "range": false,
                     "refId": "E"
                 },
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_php_info{wp_site=~\"$website\", type=\"max_execution_time\"}",
+                    "expr": "wp_exec_time_display{wp_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
-                    "legendFormat": "__auto",
+                    "legendFormat": "Max Exec: {{value}}",
                     "range": false,
                     "refId": "F"
                 }
@@ -1115,116 +1415,41 @@
             "title": "WordPress and PHP Configuration",
             "transformations": [
                 {
-                    "id": "merge",
-                    "options": {}
+                    "id": "filterFieldsByName",
+                    "options": {
+                        "include": {
+                            "names": [
+                                "wp_site",
+                                "version",
+                                "php_version",
+                                "memory_limit",
+                                "upload_max",
+                                "post_max",
+                                "exec_time"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "id": "groupBy",
+                    "id": "joinByField",
                     "options": {
-                        "fields": {
-                            "Value #A": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "Value #B": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "Value #C": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "Value #D": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "Value #E": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "Value #F": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "label": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "namespace": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "pod": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "version": {
-                                "aggregations": [
-                                    "lastNotNull"
-                                ],
-                                "operation": "aggregate"
-                            },
-                            "wp_site": {
-                                "aggregations": [],
-                                "operation": "groupby"
-                            }
-                        }
+                        "byField": "wp_site",
+                        "mode": "outer"
                     }
                 },
                 {
                     "id": "organize",
                     "options": {
-                        "excludeByName": {
-                            "__name__": true,
-                            "Time": true,
-                            "job": true,
-                            "instance": true,
-                            "type": true,
-                            "update_available": true,
-                            "container": true,
-                            "endpoint": true,
-                            "Value #A (lastNotNull)": true,
-                            "Value #B (lastNotNull)": true
-                        },
-                        "indexByName": {
-                            "wp_site": 0,
-                            "namespace (lastNotNull)": 1,
-                            "pod (lastNotNull)": 2,
-                            "version (lastNotNull)": 3,
-                            "label (lastNotNull)": 4,
-                            "Value #C (lastNotNull)": 5,
-                            "Value #D (lastNotNull)": 6,
-                            "Value #E (lastNotNull)": 7,
-                            "Value #F (lastNotNull)": 8
-                        },
+                        "excludeByName": {},
+                        "indexByName": {},
                         "renameByName": {
-                            "wp_site": "Website",
-                            "namespace (lastNotNull)": "Namespace",
-                            "pod (lastNotNull)": "Pod",
-                            "version (lastNotNull)": "WordPress Version",
-                            "label (lastNotNull)": "PHP Version",
-                            "Value #C (lastNotNull)": "Memory Limit (MB)",
-                            "Value #D (lastNotNull)": "Upload Max Filesize (MB)",
-                            "Value #E (lastNotNull)": "Post Max Size (MB)",
-                            "Value #F (lastNotNull)": "Max Execution Time (s)"
+                            "exec_time": "Max Execution Time",
+                            "memory_limit": "Memory Limit",
+                            "php_version": "PHP Version",
+                            "post_max": "Post Max Size",
+                            "upload_max": "Upload Max Filesize",
+                            "version": "WordPress Version",
+                            "wp_site": "Website"
                         }
                     }
                 }
@@ -1248,12 +1473,7 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "yellow",
-                                "value": 1
+                                "color": "green"
                             }
                         ]
                     },
@@ -1269,8 +1489,8 @@
                             {
                                 "id": "color",
                                 "value": {
-                                    "mode": "fixed",
-                                    "fixedColor": "red"
+                                    "fixedColor": "red",
+                                    "mode": "fixed"
                                 }
                             }
                         ]
@@ -1281,7 +1501,7 @@
                 "h": 6,
                 "w": 12,
                 "x": 0,
-                "y": 23
+                "y": 32
             },
             "id": 13,
             "options": {
@@ -1289,6 +1509,7 @@
                 "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -1296,14 +1517,16 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value_and_name",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wp_plugins{wp_site=~\"$website\", status=\"active\"})",
@@ -1330,7 +1553,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${datasource}"
+                "uid": "${DS_PROMETHEUS}"
             },
             "description": "Plugin update status - plugins needing updates shown in red",
             "fieldConfig": {
@@ -1344,12 +1567,7 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "yellow",
-                                "value": 1
+                                "color": "green"
                             }
                         ]
                     },
@@ -1374,8 +1592,7 @@
                                     "mode": "absolute",
                                     "steps": [
                                         {
-                                            "color": "green",
-                                            "value": null
+                                            "color": "green"
                                         },
                                         {
                                             "color": "green",
@@ -1396,7 +1613,7 @@
                 "h": 6,
                 "w": 12,
                 "x": 12,
-                "y": 23
+                "y": 32
             },
             "id": 14,
             "options": {
@@ -1404,6 +1621,7 @@
                 "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "auto",
+                "percentChangeColorMode": "standard",
                 "reduceOptions": {
                     "calcs": [
                         "lastNotNull"
@@ -1411,22 +1629,12 @@
                     "fields": "",
                     "values": false
                 },
+                "showPercentChange": false,
                 "textMode": "value_and_name",
                 "wideLayout": true
             },
-            "pluginVersion": "11.2.0",
+            "pluginVersion": "11.5.2",
             "targets": [
-                {
-                    "datasource": {
-                        "uid": "${datasource}"
-                    },
-                    "editorMode": "code",
-                    "expr": "sum(wp_plugins_update{wp_site=~\"$website\", status=\"available\"})",
-                    "instant": true,
-                    "legendFormat": "Updates Available",
-                    "range": false,
-                    "refId": "A"
-                },
                 {
                     "datasource": {
                         "uid": "${datasource}"
@@ -1435,6 +1643,18 @@
                     "expr": "sum(wp_plugins_update{wp_site=~\"$website\", status=\"uptodate\"})",
                     "instant": true,
                     "legendFormat": "Up to Date",
+                    "range": false,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(wp_plugins_update{wp_site=~\"$website\", status=\"available\"})",
+                    "instant": true,
+                    "legendFormat": "Updates Available",
                     "range": false,
                     "refId": "B"
                 }
@@ -1457,7 +1677,8 @@
                         "hideFrom": {
                             "legend": false,
                             "tooltip": false,
-                            "vis": false
+                            "vis": false,
+                            "viz": false
                         }
                     },
                     "mappings": [],
@@ -1469,22 +1690,10 @@
                 "h": 8,
                 "w": 12,
                 "x": 0,
-                "y": 29
+                "y": 38
             },
             "id": 15,
             "options": {
-                "reduceOptions": {
-                    "values": false,
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": ""
-                },
-                "pieType": "pie",
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                },
                 "legend": {
                     "displayMode": "table",
                     "placement": "right",
@@ -1492,12 +1701,27 @@
                     "values": [
                         "value"
                     ]
+                },
+                "pieType": "pie",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "tooltip": {
+                    "hideZeros": false,
+                    "mode": "single",
+                    "sort": "none"
                 }
             },
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum by (status) (wp_comments{wp_site=~\"$website\", status!=\"spam\", status!=\"all\"})",
@@ -1525,7 +1749,8 @@
                         "hideFrom": {
                             "legend": false,
                             "tooltip": false,
-                            "vis": false
+                            "vis": false,
+                            "viz": false
                         }
                     },
                     "mappings": [],
@@ -1537,22 +1762,10 @@
                 "h": 8,
                 "w": 12,
                 "x": 12,
-                "y": 29
+                "y": 38
             },
             "id": 16,
             "options": {
-                "reduceOptions": {
-                    "values": false,
-                    "calcs": [
-                        "lastNotNull"
-                    ],
-                    "fields": ""
-                },
-                "pieType": "pie",
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                },
                 "legend": {
                     "displayMode": "table",
                     "placement": "right",
@@ -1560,12 +1773,27 @@
                     "values": [
                         "value"
                     ]
+                },
+                "pieType": "pie",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "tooltip": {
+                    "hideZeros": false,
+                    "mode": "single",
+                    "sort": "none"
                 }
             },
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "sum by (role) (wp_users{wp_site=~\"$website\", role!=\"total\"})",
@@ -1591,17 +1819,20 @@
                     },
                     "custom": {
                         "axisBorderShow": false,
+                        "axisCenteredZero": false,
                         "axisColorMode": "text",
                         "axisLabel": "",
                         "axisPlacement": "auto",
                         "barAlignment": 0,
+                        "barWidthFactor": 0.6,
                         "drawStyle": "line",
                         "fillOpacity": 0,
                         "gradientMode": "none",
                         "hideFrom": {
                             "legend": false,
                             "tooltip": false,
-                            "vis": false
+                            "vis": false,
+                            "viz": false
                         },
                         "insertNulls": false,
                         "lineInterpolation": "linear",
@@ -1625,8 +1856,7 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
-                                "value": null
+                                "color": "green"
                             }
                         ]
                     },
@@ -1638,7 +1868,7 @@
                 "h": 9,
                 "w": 24,
                 "x": 0,
-                "y": 37
+                "y": 46
             },
             "id": 17,
             "options": {
@@ -1649,14 +1879,17 @@
                     "showLegend": true
                 },
                 "tooltip": {
+                    "hideZeros": false,
                     "mode": "single",
                     "sort": "none"
                 }
             },
+            "pluginVersion": "11.5.2",
             "targets": [
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_posts{wp_site=~\"$website\", status=\"published\"}",
@@ -1678,7 +1911,8 @@
                 },
                 {
                     "datasource": {
-                        "uid": "${datasource}"
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
                     "expr": "wp_pages{wp_site=~\"$website\", status=\"published\"}",
@@ -1692,7 +1926,8 @@
             "type": "timeseries"
         }
     ],
-    "schemaVersion": 39,
+    "refresh": "",
+    "schemaVersion": 40,
     "tags": [
         "wordpress",
         "monitoring",
@@ -1702,35 +1937,23 @@
     "templating": {
         "list": [
             {
-                "current": {
-                    "selected": false,
-                    "text": "default",
-                    "value": "default"
-                },
-                "hide": 0,
+                "current": {},
                 "includeAll": false,
-                "multi": false,
                 "name": "datasource",
                 "options": [],
                 "query": "prometheus",
                 "refresh": 1,
                 "regex": "",
-                "skipUrlSync": false,
                 "type": "datasource"
             },
             {
                 "allValue": ".*",
-                "current": {
-                    "selected": false,
-                    "text": "All",
-                    "value": "$__all"
-                },
+                "current": {},
                 "datasource": {
                     "type": "prometheus",
                     "uid": "${datasource}"
                 },
                 "definition": "label_values(wp_users, wp_site)",
-                "hide": 0,
                 "includeAll": true,
                 "multi": true,
                 "name": "website",
@@ -1741,7 +1964,6 @@
                 },
                 "refresh": 1,
                 "regex": "",
-                "skipUrlSync": false,
                 "sort": 1,
                 "type": "query"
             }
@@ -1755,6 +1977,6 @@
     "timezone": "browser",
     "title": "WordPress Comprehensive Monitoring Dashboard",
     "uid": "wordpress-monitoring-dashboard",
-    "version": 1,
+    "version": 3,
     "weekStart": ""
 }
