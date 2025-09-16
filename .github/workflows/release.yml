@@ -4,7 +4,7 @@ on:
   push:
     branches: [master, main]
     paths:
-      - "prometheus-metrics/readme.txt"
+      - slymetrics/readme.txt
   workflow_dispatch:
     inputs:
       version:
@@ -47,11 +47,11 @@ jobs:
           else
             # Automatic trigger - check for actual changes
             # Get the stable tag from current commit
-            CURRENT_VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //')
+            CURRENT_VERSION=$(grep "Stable tag:" slymetrics/readme.txt | sed 's/Stable tag: //')
             echo "Current version: $CURRENT_VERSION"
 
             # Get the stable tag from previous commit
-            git show HEAD~1:prometheus-metrics/readme.txt > readme-old.txt || echo "No previous version"
+            git show HEAD~1:slymetrics/readme.txt > readme-old.txt || echo "No previous version"
             if [ -f readme-old.txt ]; then
               PREVIOUS_VERSION=$(grep "Stable tag:" readme-old.txt | sed 's/Stable tag: //' || echo "")
               echo "Previous version: $PREVIOUS_VERSION"
@@ -78,7 +78,7 @@ jobs:
             VERSION="${{ inputs.version }}"
             echo "Using manually provided version: $VERSION"
           else
-            VERSION=$(grep "Stable tag:" prometheus-metrics/readme.txt | sed 's/Stable tag: //' | tr -d ' \r\n')
+            VERSION=$(grep "Stable tag:" slymetrics/readme.txt | sed 's/Stable tag: //' | tr -d ' \r\n')
             echo "Using version from readme.txt: $VERSION"
           fi
 
@@ -136,20 +136,20 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
 
           # Create temporary directory for the plugin
-          mkdir -p temp/prometheus-metrics
+          mkdir -p temp/slymetrics
 
           # Copy plugin files
-          cp -r prometheus-metrics/* temp/prometheus-metrics/
+          cp -r slymetrics/* temp/slymetrics/
 
           # Create ZIP file
           cd temp
-          zip -r "../prometheus-metrics-${VERSION}.zip" prometheus-metrics/
+          zip -r "../slymetrics-${VERSION}.zip" slymetrics/
           cd ..
 
           # Verify ZIP was created
-          if [ -f "prometheus-metrics-${VERSION}.zip" ]; then
-            echo "ZIP file created successfully: prometheus-metrics-${VERSION}.zip"
-            ls -la "prometheus-metrics-${VERSION}.zip"
+          if [ -f "slymetrics-${VERSION}.zip" ]; then
+            echo "ZIP file created successfully: slymetrics-${VERSION}.zip"
+            ls -la "slymetrics-${VERSION}.zip"
           else
             echo "ERROR: ZIP file was not created"
             exit 1
@@ -162,7 +162,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
 
           # Extract changelog for this version from readme.txt
-          awk "/= $VERSION =/{flag=1; next} /= [0-9]/{flag=0} flag" prometheus-metrics/readme.txt > changelog.txt
+          awk "/= $VERSION =/{flag=1; next} /= [0-9]/{flag=0} flag" slymetrics/readme.txt > changelog.txt
 
           # If changelog is empty, create a generic one
           if [ ! -s changelog.txt ]; then
@@ -185,7 +185,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            prometheus-metrics-${{ steps.version.outputs.version }}.zip
+            slymetrics-${{ steps.version.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
@@ -193,11 +193,11 @@ jobs:
         if: steps.check-release.outputs.exists == 'false'
         run: |
           echo "🎉 Successfully created release v${{ steps.version.outputs.version }}"
-          echo "📦 ZIP file: prometheus-metrics-${{ steps.version.outputs.version }}.zip"
+          echo "📦 ZIP file: slymetrics-${{ steps.version.outputs.version }}.zip"
           echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
           echo ""
           echo "📋 Files included in ZIP:"
-          unzip -l "prometheus-metrics-${{ steps.version.outputs.version }}.zip"
+          unzip -l "slymetrics-${{ steps.version.outputs.version }}.zip"
 
       - name: Skip Release (Already Exists)
         if: steps.check-release.outputs.exists == 'true'
