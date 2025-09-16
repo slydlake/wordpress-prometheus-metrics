@@ -70,7 +70,7 @@
             }
         ]
     },
-    "description": "WordPress Comprehensive Dashboard - Monitor WordPress sites with health, performance, and content metrics",
+    "description": "WordPress Dashboard - Monitor WordPress sites with health, performance, and content metrics",
     "editable": true,
     "fiscalYearStartMonth": 0,
     "graphTooltip": 0,
@@ -135,7 +135,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_users{wp_site=~\"$website\", role=\"total\"})",
+                    "expr": "sum(wordpress_users_total{wordpress_site=~\"$website\", role=\"total\"})",
                     "instant": true,
                     "legendFormat": "Total Users",
                     "range": false,
@@ -203,7 +203,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_pages{wp_site=~\"$website\", status=\"published\"})",
+                    "expr": "sum(wordpress_pages_total{wordpress_site=~\"$website\", status=\"published\"})",
                     "instant": true,
                     "legendFormat": "Published Pages",
                     "range": false,
@@ -271,7 +271,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_posts{wp_site=~\"$website\", status=\"published\"})",
+                    "expr": "sum(wordpress_posts_total{wordpress_site=~\"$website\", status=\"published\"})",
                     "instant": true,
                     "legendFormat": "Published Posts",
                     "range": false,
@@ -339,7 +339,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_media{wp_site=~\"$website\"})",
+                    "expr": "sum(wordpress_media_total{wordpress_site=~\"$website\"})",
                     "instant": true,
                     "legendFormat": "Media Items",
                     "range": false,
@@ -415,7 +415,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"critical\"})",
+                    "expr": "sum(wordpress_health_check_total{wordpress_site=~\"$website\", category=\"critical\"})",
                     "instant": true,
                     "legendFormat": "Critical Issues",
                     "range": false,
@@ -491,7 +491,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"total_failed\"})",
+                    "expr": "sum(wordpress_health_check_total{wordpress_site=~\"$website\", category=\"total_failed\"})",
                     "instant": true,
                     "legendFormat": "Total Failed",
                     "range": false,
@@ -564,7 +564,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"recommended\"})",
+                    "expr": "sum(wordpress_health_check_total{wordpress_site=~\"$website\", category=\"recommended\"})",
                     "instant": true,
                     "legendFormat": "Recommended",
                     "range": false,
@@ -633,7 +633,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_health_check{wp_site=~\"$website\", category=\"good\"})",
+                    "expr": "sum(wordpress_health_check_total{wordpress_site=~\"$website\", category=\"good\"})",
                     "instant": true,
                     "legendFormat": "Good",
                     "range": false,
@@ -706,9 +706,9 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_health_check{wp_site=~\"$website\", category=\"security\"}",
+                    "expr": "wordpress_health_check_total{wordpress_site=~\"$website\", category=\"security\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}}",
+                    "legendFormat": "{{wordpress_site}}",
                     "range": false,
                     "refId": "A"
                 }
@@ -779,9 +779,9 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_health_check{wp_site=~\"$website\", category=\"performance\"}",
+                    "expr": "wordpress_health_check_total{wordpress_site=~\"$website\", category=\"performance\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}}",
+                    "legendFormat": "{{wordpress_site}}",
                     "range": false,
                     "refId": "A"
                 }
@@ -812,12 +812,10 @@
                         {
                             "options": {
                                 "0": {
-                                    "color": "red",
                                     "index": 0,
                                     "text": "FAILED"
                                 },
                                 "1": {
-                                    "color": "green",
                                     "index": 1,
                                     "text": "PASSED"
                                 }
@@ -938,7 +936,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "builder",
-                    "expr": "wp_health_check_detail{wp_site=~\"$website\"}",
+                    "expr": "wordpress_health_check_detail_info{wordpress_site=~\"$website\"} == 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "__auto",
@@ -961,22 +959,50 @@
                             "namespace": true,
                             "pod": true,
                             "service": true,
-                            "test_name": true
+                            "test_name": true,
+                            "Critical Failed": true,
+                            "Is Critical": true
                         },
                         "indexByName": {
                             "Value": 4,
                             "category": 2,
                             "description": 3,
                             "status": 1,
-                            "wp_site": 0
+                            "wordpress_site": 0
                         },
                         "renameByName": {
                             "Value": "Status",
                             "category": "Category",
                             "description": "Description",
                             "status": "Status Type",
-                            "wp_site": "Website"
+                            "wordpress_site": "Website"
                         }
+                    }
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "Critical Failed",
+                        "binary": {
+                            "left": "Status",
+                            "operator": "==",
+                            "reducer": "sum",
+                            "right": "0"
+                        },
+                        "mode": "binary"
+                    }
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "Is Critical",
+                        "binary": {
+                            "left": "Category",
+                            "operator": "==",
+                            "reducer": "sum",
+                            "right": "critical"
+                        },
+                        "mode": "binary"
                     }
                 },
                 {
@@ -1009,7 +1035,8 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "thresholds"
+                        "mode": "fixed",
+                        "fixedColor": "blue"
                     },
                     "mappings": [],
                     "noValue": "0",
@@ -1017,16 +1044,8 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
+                                "color": "blue",
                                 "value": null
-                            },
-                            {
-                                "color": "yellow",
-                                "value": 100
-                            },
-                            {
-                                "color": "red",
-                                "value": 1000
                             }
                         ]
                     },
@@ -1041,7 +1060,7 @@
                         "properties": [
                             {
                                 "id": "unit",
-                                "value": "decmbytes"
+                                "value": "bytes"
                             }
                         ]
                     },
@@ -1053,7 +1072,7 @@
                         "properties": [
                             {
                                 "id": "unit",
-                                "value": "decmbytes"
+                                "value": "bytes"
                             }
                         ]
                     }
@@ -1091,9 +1110,9 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_database_size{wp_site=~\"$website\"}",
+                    "expr": "wordpress_database_size_bytes{wordpress_site=~\"$website\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}} - Database Size",
+                    "legendFormat": "{{wordpress_site}} - Database Size",
                     "range": false,
                     "refId": "A"
                 },
@@ -1102,9 +1121,9 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_autoload_count{wp_site=~\"$website\"}",
+                    "expr": "wordpress_autoload_options_total{wordpress_site=~\"$website\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}} - Autoload Options Count",
+                    "legendFormat": "{{wordpress_site}} - Autoload Options Count",
                     "range": false,
                     "refId": "B"
                 },
@@ -1114,11 +1133,23 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_autoload_size{wp_site=~\"$website\"}",
+                    "expr": "wordpress_autoload_size_bytes{wordpress_site=~\"$website\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}} - Autoload Size (KB)",
+                    "legendFormat": "{{wordpress_site}} - Autoload Size (Bytes)",
                     "range": false,
                     "refId": "C"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "${DS_PROMETHEUS}"
+                    },
+                    "editorMode": "code",
+                    "expr": "wordpress_autoload_transients_total{wordpress_site=~\"$website\"}",
+                    "instant": true,
+                    "legendFormat": "{{wordpress_site}} - Autoload Transients",
+                    "range": false,
+                    "refId": "D"
                 }
             ],
             "title": "Database and Autoload Metrics",
@@ -1133,7 +1164,8 @@
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "thresholds"
+                        "mode": "fixed",
+                        "fixedColor": "blue"
                     },
                     "mappings": [],
                     "noValue": "0",
@@ -1141,16 +1173,8 @@
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
+                                "color": "blue",
                                 "value": null
-                            },
-                            {
-                                "color": "yellow",
-                                "value": 100
-                            },
-                            {
-                                "color": "red",
-                                "value": 1000
                             }
                         ]
                     },
@@ -1165,7 +1189,7 @@
                         "properties": [
                             {
                                 "id": "unit",
-                                "value": "decmbytes"
+                                "value": "bytes"
                             }
                         ]
                     }
@@ -1203,9 +1227,9 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_directory_size{wp_site=~\"$website\", directory=\"total\"}",
+                    "expr": "wordpress_directory_size_bytes{wordpress_site=~\"$website\", directory=\"total\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}} - Total Directory Size",
+                    "legendFormat": "{{wordpress_site}} - Total Directory Size",
                     "range": false,
                     "refId": "A"
                 },
@@ -1214,9 +1238,9 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_directory_size{wp_site=~\"$website\", directory=\"uploads\"}",
+                    "expr": "wordpress_directory_size_bytes{wordpress_site=~\"$website\", directory=\"uploads\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}} - Uploads Directory Size",
+                    "legendFormat": "{{wordpress_site}} - Uploads Directory Size",
                     "range": false,
                     "refId": "B"
                 },
@@ -1226,9 +1250,9 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_directory_size{wp_site=~\"$website\", directory=\"themes\"}",
+                    "expr": "wordpress_directory_size_bytes{wordpress_site=~\"$website\", directory=\"themes\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}} - Themes Directory Size",
+                    "legendFormat": "{{wordpress_site}} - Themes Directory Size",
                     "range": false,
                     "refId": "C"
                 },
@@ -1237,9 +1261,9 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_directory_size{wp_site=~\"$website\", directory=\"plugins\"}",
+                    "expr": "wordpress_directory_size_bytes{wordpress_site=~\"$website\", directory=\"plugins\"}",
                     "instant": true,
-                    "legendFormat": "{{wp_site}} - Plugins Directory Size",
+                    "legendFormat": "{{wordpress_site}} - Plugins Directory Size",
                     "range": false,
                     "refId": "D"
                 }
@@ -1341,7 +1365,7 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_version{wp_site=~\"$website\"}",
+                    "expr": "wordpress_version{wordpress_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "__auto",
@@ -1354,7 +1378,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_php_version{wp_site=~\"$website\"}",
+                    "expr": "wordpress_php_version_info{wordpress_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "__auto",
@@ -1366,7 +1390,7 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_memory_limit_display{wp_site=~\"$website\"}",
+                    "expr": "wordpress_memory_limit_info{wordpress_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Memory Limit: {{value}}",
@@ -1379,7 +1403,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_upload_max_display{wp_site=~\"$website\"}",
+                    "expr": "wordpress_upload_max_info{wordpress_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Upload Max: {{value}}",
@@ -1391,7 +1415,7 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_post_max_display{wp_site=~\"$website\"}",
+                    "expr": "wordpress_post_max_info{wordpress_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Post Max: {{value}}",
@@ -1404,7 +1428,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_exec_time_display{wp_site=~\"$website\"}",
+                    "expr": "wordpress_exec_time_info{wordpress_site=~\"$website\"}",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Max Exec: {{value}}",
@@ -1419,7 +1443,7 @@
                     "options": {
                         "include": {
                             "names": [
-                                "wp_site",
+                                "wordpress_site",
                                 "version",
                                 "php_version",
                                 "memory_limit",
@@ -1433,7 +1457,7 @@
                 {
                     "id": "joinByField",
                     "options": {
-                        "byField": "wp_site",
+                        "byField": "wordpress_site",
                         "mode": "outer"
                     }
                 },
@@ -1449,7 +1473,7 @@
                             "post_max": "Post Max Size",
                             "upload_max": "Upload Max Filesize",
                             "version": "WordPress Version",
-                            "wp_site": "Website"
+                            "wordpress_site": "Website"
                         }
                     }
                 }
@@ -1529,7 +1553,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_plugins{wp_site=~\"$website\", status=\"active\"})",
+                    "expr": "sum(wordpress_plugins_total{wordpress_site=~\"$website\", status=\"active\"})",
                     "instant": true,
                     "legendFormat": "Active Plugins",
                     "range": false,
@@ -1540,7 +1564,7 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_plugins{wp_site=~\"$website\", status=\"inactive\"})",
+                    "expr": "sum(wordpress_plugins_total{wordpress_site=~\"$website\", status=\"inactive\"})",
                     "instant": true,
                     "legendFormat": "Inactive Plugins",
                     "range": false,
@@ -1640,7 +1664,7 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_plugins_update{wp_site=~\"$website\", status=\"uptodate\"})",
+                    "expr": "sum(wordpress_plugins_update_total{wordpress_site=~\"$website\", status=\"uptodate\"})",
                     "instant": true,
                     "legendFormat": "Up to Date",
                     "range": false,
@@ -1652,7 +1676,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum(wp_plugins_update{wp_site=~\"$website\", status=\"available\"})",
+                    "expr": "sum(wordpress_plugins_update_total{wordpress_site=~\"$website\", status=\"available\"})",
                     "instant": true,
                     "legendFormat": "Updates Available",
                     "range": false,
@@ -1724,7 +1748,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum by (status) (wp_comments{wp_site=~\"$website\", status!=\"spam\", status!=\"all\"})",
+                    "expr": "sum by (status) (wordpress_comments_total{wordpress_site=~\"$website\", status!=\"spam\", status!=\"all\"})",
                     "instant": true,
                     "legendFormat": "{{status}}",
                     "range": false,
@@ -1796,7 +1820,7 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "sum by (role) (wp_users{wp_site=~\"$website\", role!=\"total\"})",
+                    "expr": "sum by (role) (wordpress_users_total{wordpress_site=~\"$website\", role!=\"total\"})",
                     "instant": true,
                     "legendFormat": "{{role}}",
                     "range": false,
@@ -1892,9 +1916,9 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_posts{wp_site=~\"$website\", status=\"published\"}",
+                    "expr": "wordpress_posts_total{wordpress_site=~\"$website\", status=\"published\"}",
                     "instant": false,
-                    "legendFormat": "{{wp_site}} - Published Posts",
+                    "legendFormat": "{{wordpress_site}} - Published Posts",
                     "range": true,
                     "refId": "A"
                 },
@@ -1903,9 +1927,9 @@
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_comments{wp_site=~\"$website\", status=\"approved\"}",
+                    "expr": "wordpress_comments_total{wordpress_site=~\"$website\", status=\"approved\"}",
                     "instant": false,
-                    "legendFormat": "{{wp_site}} - Approved Comments",
+                    "legendFormat": "{{wordpress_site}} - Approved Comments",
                     "range": true,
                     "refId": "B"
                 },
@@ -1915,9 +1939,9 @@
                         "uid": "${DS_PROMETHEUS}"
                     },
                     "editorMode": "code",
-                    "expr": "wp_pages{wp_site=~\"$website\", status=\"published\"}",
+                    "expr": "wordpress_pages_total{wordpress_site=~\"$website\", status=\"published\"}",
                     "instant": false,
-                    "legendFormat": "{{wp_site}} - Published Pages",
+                    "legendFormat": "{{wordpress_site}} - Published Pages",
                     "range": true,
                     "refId": "C"
                 }
@@ -1953,13 +1977,13 @@
                     "type": "prometheus",
                     "uid": "${datasource}"
                 },
-                "definition": "label_values(wp_users, wp_site)",
+                "definition": "label_values(wordpress_users_total, wordpress_site)",
                 "includeAll": true,
                 "multi": true,
                 "name": "website",
                 "options": [],
                 "query": {
-                    "query": "label_values(wp_users, wp_site)",
+                    "query": "label_values(wordpress_users_total, wordpress_site)",
                     "refId": "StandardVariableQuery"
                 },
                 "refresh": 1,
@@ -1975,8 +1999,8 @@
     },
     "timepicker": {},
     "timezone": "browser",
-    "title": "WordPress Comprehensive Monitoring Dashboard",
-    "uid": "wordpress-monitoring-dashboard",
+    "title": "WordPress Monitoring",
+    "uid": "wordpress-monitoring",
     "version": 3,
     "weekStart": ""
 }
